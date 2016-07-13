@@ -127,7 +127,7 @@ final class MultiFileMetadataSourceImpl implements MetadataSource {
       } else {
         regionToMetadataMap.put(regionCode, metadata);
       }
-    } catch (IOException e) {
+    } catch (Exception e) {
       logger.log(Level.SEVERE, "cannot load/parse metadata: " + fileName, e);
       throw new RuntimeException("cannot load/parse metadata: " + fileName, e);
     }
@@ -147,9 +147,10 @@ final class MultiFileMetadataSourceImpl implements MetadataSource {
 
     PhoneMetadataCollection metadataCollection = new PhoneMetadataCollection();
     try {
+      // Read in metadata for each region.
       metadataCollection.mergeFrom(
           MetadataManager.convertStreamToByteBuffer(source, MULTI_FILE_BUFFER_SIZE));
-    } catch (IOException e) {
+    } catch (Exception e) {
       logger.log(Level.WARNING, "error reading input (ignored)", e);
     } finally {
       try {

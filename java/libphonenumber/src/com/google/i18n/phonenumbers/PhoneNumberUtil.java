@@ -591,8 +591,8 @@ public class PhoneNumberUtil {
     // there are entries that list the non-geo entity alongside normal regions (which is wrong).
     // If we discover this, remove the non-geo entity from the set of supported regions and log.
     if (supportedRegions.remove(REGION_CODE_FOR_NON_GEO_ENTITY)) {
-      logger.log(Level.WARNING, "invalid metadata " +
-          "(country calling code was mapped to the non-geo entity as well as specific region(s))");
+      logger.log(Level.WARNING, "invalid metadata (country calling code was mapped to the non-geo "
+          + "entity as well as specific region(s))");
     }
     nanpaRegions.addAll(countryCallingCodeToRegionCodeMap.get(NANPA_COUNTRY_CODE));
   }

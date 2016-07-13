@@ -30,7 +30,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Implementation of {@link MetadataSource} that reads from a single resource file.
+ * Implementation of {@link MetadataSource} that reads from a single resource file during
+ * initialization.
  */
 final class SingleFileMetadataSourceImpl implements MetadataSource {
 
@@ -75,8 +76,6 @@ final class SingleFileMetadataSourceImpl implements MetadataSource {
   public PhoneMetadata getMetadataForRegion(String regionCode) {
     synchronized (regionToMetadataMap) {
       if (!regionToMetadataMap.containsKey(regionCode)) {
-        // The regionCode here will be valid and won't be '001', so we don't need to worry about
-        // what to pass in for the country calling code.
         loadMetadataFromFile();
       }
     }
@@ -95,14 +94,13 @@ final class SingleFileMetadataSourceImpl implements MetadataSource {
 
   // @VisibleForTesting
   void loadMetadataFromFile() {
-    InputStream source = metadataLoader.loadMetadata(fileName);
-    if (source == null) {
+    InputStream input = metadataLoader.loadMetadata(fileName);
+    if (input == null) {
       logger.log(Level.SEVERE, "missing metadata: " + fileName);
       throw new IllegalStateException("missing metadata: " + fileName);
     }
     try {
-      PhoneMetadataCollection metadataCollection =
-          loadMetadataAndCloseInput(new ObjectInputStream(source));
+      PhoneMetadataCollection metadataCollection = loadMetadataAndCloseInput(input);
       PhoneMetadata[] metadataList = metadataCollection.metadata;
       if (metadataList.length == 0) {
         logger.log(Level.SEVERE, "empty metadata: " + fileName);
@@ -118,7 +116,7 @@ final class SingleFileMetadataSourceImpl implements MetadataSource {
           regionToMetadataMap.put(regionCode, metadata);
         }
       }
-    } catch (IOException e) {
+    } catch (Exception e) {
       logger.log(Level.SEVERE, "cannot load/parse metadata: " + fileName, e);
       throw new RuntimeException("cannot load/parse metadata: " + fileName, e);
     }
@@ -128,20 +126,22 @@ final class SingleFileMetadataSourceImpl implements MetadataSource {
    * Loads the metadata protocol buffer from the given stream and closes the stream afterwards. Any
    * exceptions that occur while reading or closing the stream are ignored.
    *
-   * @param source  the non-null stream from which metadata is to be read.
+   * @param input  the non-null stream from which metadata is to be read.
    * @return        the loaded metadata protocol buffer.
    */
-  private static PhoneMetadataCollection loadMetadataAndCloseInput(ObjectInputStream source) {
-    // The size of the byte buffer for deserializing the single nano metadata file which holds
-    // metadata for all regions.
+  private static PhoneMetadataCollection loadMetadataAndCloseInput(InputStream input) {
+    // The size of the byte buffer used for deserializing the single phone number metadata file for
+    // all regions.
     final int SINGLE_FILE_BUFFER_SIZE = 256 * 1024;
+    ObjectInputStream source = new ObjectInputStream(input);
 
     PhoneMetadataCollection metadataCollection = new PhoneMetadataCollection();
     try {
+      // Read in metadata for each region.
       metadataCollection.mergeFrom(
           MetadataManager.convertStreamToByteBuffer(source, SINGLE_FILE_BUFFER_SIZE));
-    } catch (IOException e) {
-      logger.log(Level.WARNING, "error reading input (ignored)", e);
+    } catch (Exception e) {
+      logger.log(Level.WARNING, "error reading input stream (ignored)", e);
     } finally {
       try {
         source.close();
